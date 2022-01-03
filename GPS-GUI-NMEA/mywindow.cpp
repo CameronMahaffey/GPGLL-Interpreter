@@ -9,6 +9,8 @@
 #include <QPixmap>
 #include <QtCharts>
 
+#define MAX_ELEVATION 90
+
 
 MyWindow::MyWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -16,33 +18,94 @@ MyWindow::MyWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
+    // Set background color of app
+    this->setStyleSheet("background-color: #C0CEE0;");
+
+    // Setting up the map widget
     ui->mapWidget->setSource(QUrl(QStringLiteral("qrc:/map.qml")));
     ui->mapWidget->show();
+    auto mapObj = ui->mapWidget->rootObject();
+    connect(this, SIGNAL(setCenter(QVariant,QVariant)), mapObj, SLOT(setCenter(QVariant,QVariant)));
 
+    // Setting up the status square
     ui->statusLabel->setStyleSheet("QLabel {background-color : blue;}");
 
+    // Setting up combo box entries
     ui->formatComboBox->addItem("DMS");
     ui->formatComboBox->addItem("DD");
     ui->formatComboBox->addItem("DMM");
     ui->displayComboBox->addItem("Map");
     ui->displayComboBox->addItem("Constellation");
 
-    QPolarChart *constellation = new QPolarChart();
-    QLineSeries *series = new QLineSeries();
-    QChartView *chartView = new QChartView(constellation);
+    // Setting up the Polar Constellation chart
+    // Set up elevation axis, reversed
+    QCategoryAxis *elevationAxis = new QCategoryAxis;
+    elevationAxis->setRange(0, MAX_ELEVATION);
+    for(unsigned int i = 0; i <= MAX_ELEVATION; i += 10)
+        elevationAxis->append(QString::number(MAX_ELEVATION-i), i);
+    elevationAxis->setLabelsPosition(QCategoryAxis::AxisLabelsPositionOnValue);
+    elevationAxis->setLabelsVisible(true);
+    constellation->addAxis(elevationAxis, QPolarChart::PolarOrientationRadial);
+
+    // Set up azimuth axis
+    QValueAxis *azimuthAxis = new QValueAxis();
+    azimuthAxis->setRange(0, 360);
+    azimuthAxis->setTickCount(9);
+    azimuthAxis->setLabelFormat("%d");
+    azimuthAxis->setLabelsVisible(true);
+    constellation->addAxis(azimuthAxis, QPolarChart::PolarOrientationAngular);
+
+    // Change background of chart
+    QLinearGradient backgroundGradient;
+    backgroundGradient.setStart(QPointF(0, 0));
+    backgroundGradient.setFinalStop(QPointF(0, 1));
+    backgroundGradient.setColorAt(0.0, QRgb(0xd2d0d1));
+    backgroundGradient.setColorAt(1.0, QRgb(0x4c4547));
+    backgroundGradient.setCoordinateMode(QGradient::ObjectBoundingMode);
+    constellation->setBackgroundBrush(backgroundGradient);
+
+    // Change background of plot
+    QLinearGradient plotAreaGradient;
+    plotAreaGradient.setStart(QPointF(0, 0));
+    plotAreaGradient.setFinalStop(QPointF(90, 360));
+    plotAreaGradient.setColorAt(0.0, QRgb(0x555555));
+    plotAreaGradient.setColorAt(1.0, QRgb(0x55aa55));
+    plotAreaGradient.setCoordinateMode(QGradient::ObjectBoundingMode);
+    constellation->setPlotAreaBackgroundBrush(plotAreaGradient);
+    constellation->setPlotAreaBackgroundVisible(true);
+
+    // Set marker size for points and add empty series to chart
+    series->setMarkerSize(6);
     chartView->chart()->addSeries(series);
-    chartView->chart()->createDefaultAxes();
+
+    // Customize axis label font
+    QFont labelsFont;
+    labelsFont.setPixelSize(12);
+    elevationAxis->setLabelsFont(labelsFont);
+    azimuthAxis->setLabelsFont(labelsFont);
+
+    // Customize axis colors
+    QPen axisPen(QRgb(0xd18952));
+    axisPen.setWidth(2);
+    elevationAxis->setLinePen(axisPen);
+    azimuthAxis->setLinePen(axisPen);
+
+    // Customize axis label colors
+    QBrush axisBrush(Qt::white);
+    elevationAxis->setLabelsBrush(axisBrush);
+    azimuthAxis->setLabelsBrush(axisBrush);
+
+    // Add chart to the frame in stacked widget
     chartView->setParent(ui->constellationFrame);
     chartView->setFixedSize(ui->constellationFrame->size());
 
-    auto mapObj = ui->mapWidget->rootObject();
-    connect(this, SIGNAL(setCenter(QVariant,QVariant)), mapObj, SLOT(setCenter(QVariant,QVariant)));
-
+    // Adding images, because why not
     QPixmap satPix("C:\\Users\\camer\\Desktop\\uBlox\\GPS-GUI-NMEA\\icons\\satellite-Icon.png");
     ui->satImage->setPixmap(satPix.scaled(50,50,Qt::KeepAspectRatio));
     QPixmap qtPix("C:\\Users\\camer\\Desktop\\uBlox\\GPS-GUI-NMEA\\icons\\qt-Icon.png");
     ui->qtImage->setPixmap(qtPix.scaled(50,50,Qt::KeepAspectRatio));
 
+    // Initializing displays to start with dashed entries
     ui->latDegrees->display("---");
     ui->latMinutes->display("--");
     ui->latSeconds->display("---");
@@ -149,7 +212,6 @@ void MyWindow::on_pushButtonStart_clicked()
 
 
         //Identify the port the arduino uno is on.
-
         bool arduino_is_available = false;
         QString arduino_uno_port_name;
 
@@ -168,7 +230,6 @@ void MyWindow::on_pushButtonStart_clicked()
 
 
         //  Open and configure the arduino port if available
-
         if(arduino_is_available)
         {
             qDebug() << "Found the arduino port...\n";
@@ -230,7 +291,7 @@ void MyWindow::readSerial()
         if (ui->gsvCheckBox->isChecked()){
             add_to_textbox(temp);
         }
-        //do something, tbd
+        MyWindow::updateConstellation(query);
     } else if (query[0] == "$GPGGA")
     {
         if (ui->ggaCheckBox->isChecked()){
@@ -282,3 +343,19 @@ void MyWindow::on_displayComboBox_currentIndexChanged(int index)
         ui->upperStackedWidget->setCurrentIndex(index);
 }
 
+void MyWindow::updateConstellation(QStringList message)
+{
+    qDebug() << message;
+    if (series->points().size() >= message[3].toInt()){
+        series->clear();
+    }
+    for (int i = 0; i < 4; i++) {
+        if (message[5+4*i] != ""){
+            series->append(QPointF(message[5+4*i].toDouble(), message[6+4*i].toDouble()));
+            qDebug() << MAX_ELEVATION - message[5+4*i].toDouble() << "  " << message[6+4*i].toDouble();
+        }
+    }
+    qDebug() << series->points();
+    chartView->chart()->removeSeries(series);
+    chartView->chart()->addSeries(series);
+}

@@ -5,6 +5,7 @@
 #include <QSerialPort>
 #include <QMainWindow>
 #include <QVariant>
+#include <QtCharts>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MyWindow; }
@@ -30,6 +31,7 @@ private slots:
     void on_setLocationButton_clicked();
     void on_formatComboBox_currentIndexChanged(int index);
     void on_displayComboBox_currentIndexChanged(int index);
+    void updateConstellation(QStringList);
 
 private:
     Ui::MyWindow *ui;
@@ -40,6 +42,9 @@ private:
     QStringList latQuery;
     QStringList lonQuery;
     QStringList utcQuery;
+    QPolarChart *constellation = new QPolarChart();
+    QScatterSeries *series = new QScatterSeries();
+    QChartView *chartView = new QChartView(constellation);
     double latitudeDD = 35.2688;
     double longitudeDD = -81.5352;
     bool initial_connect = true;

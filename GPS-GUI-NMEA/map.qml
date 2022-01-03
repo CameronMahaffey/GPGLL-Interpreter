@@ -26,7 +26,7 @@ Rectangle {
         anchors.fill: parent
         plugin: mapPlugin
         center: QtPositioning.coordinate(initial_lat, initial_lon);
-        zoomLevel: 15
+        zoomLevel: 17
     }
 
     function setCenter(lat, lon){

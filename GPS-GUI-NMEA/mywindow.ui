@@ -555,8 +555,8 @@
    <widget class="QLabel" name="hhmmssLabel">
     <property name="geometry">
      <rect>
-      <x>572</x>
-      <y>250</y>
+      <x>570</x>
+      <y>251</y>
       <width>61</width>
       <height>20</height>
      </rect>
@@ -598,9 +598,9 @@
     <property name="geometry">
      <rect>
       <x>560</x>
-      <y>80</y>
+      <y>81</y>
       <width>91</width>
-      <height>21</height>
+      <height>20</height>
      </rect>
     </property>
     <property name="text">
@@ -1086,9 +1086,9 @@
     <property name="geometry">
      <rect>
       <x>328</x>
-      <y>80</y>
+      <y>83</y>
       <width>211</width>
-      <height>24</height>
+      <height>21</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout">
@@ -1174,10 +1174,10 @@
    <widget class="QComboBox" name="displayComboBox">
     <property name="geometry">
      <rect>
-      <x>220</x>
+      <x>210</x>
       <y>10</y>
-      <width>71</width>
-      <height>21</height>
+      <width>81</width>
+      <height>16</height>
      </rect>
     </property>
    </widget>
